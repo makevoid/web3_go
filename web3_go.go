@@ -8,25 +8,43 @@ import (
 )
 
 const (
-  apiUrl string = "http://localhost:8548"
+  apiUrl string = "http://localhost:8548" // 8545 (default port)
 )
 
 func main() {
   account := coinbase()
-  fmt.Println(account)
+  fmt.Println("account:", account)
 
   accs := accounts()
-  fmt.Println(accs)
+  fmt.Println("accounts:", accs)
+
+  bal := getBalance(account)
+  fmt.Println("balance of account:", account, "=", bal)
+
+  // TODO:
+
+  // eth_call
+
+  // eth_sendTransaction - https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_sendtransaction
+
+  // eth_getTransactionReceipt
+
+  // eth_sign?
 }
 
 func coinbase() (string) {
-  body := call("eth_coinbase").Get("result").MustString()
-  return body
+  res := call("eth_coinbase").Get("result").MustString()
+  return res
 }
 
 func accounts() ([]interface {}) {
-  body2 := call("eth_accounts").Get("result").MustArray()
-  return body2
+  res := call("eth_accounts").Get("result").MustArray()
+  return res
+}
+
+func getBalance(address string) (int) {
+  res := call("eth_getBalance", "["+address+"]").Get("result").MustInt()
+  return res
 }
 
 func call(args ...string) (*simplejson.Json) {
