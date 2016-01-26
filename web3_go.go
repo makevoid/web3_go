@@ -11,7 +11,6 @@ const (
   apiUrl string = "http://localhost:8548"
 )
 
-
 func main() {
   account := coinbase()
   fmt.Println(account)
