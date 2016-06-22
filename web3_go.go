@@ -5,8 +5,10 @@ import (
     "github.com/makevoid/web3_go/web3"
     "github.com/bitly/go-simplejson"
     "encoding/json"
-    "golang.org/x/crypto/sha3"
+    // "golang.org/x/crypto/sha3"
     "encoding/hex"
+	  "github.com/ethereum/go-ethereum/crypto"
+    "strings"
 )
 
 func main() {
@@ -25,26 +27,39 @@ func main() {
   info_c := getAbi(resp_c)
   pp(info_c)
 
-  resp := call()
-  fmt.Println("call method(), resp:", resp)
-  pp(resp)
 
-  sha := sha3.Sum512( []byte("foo") )
-  fmt.Println("sha3('foo'):", sha)
+  sha := crypto.Sha3( []byte("data()") )
+  fmt.Println("sha3('data()'):", sha)
   shaHex := hex.EncodeToString(sha[:])
   // fmt.Println("sha3('foo'):", string(sha[:32]))
-  fmt.Println("sha3('foo'):", shaHex)
+  fmt.Println("sha3('data()'):", shaHex)
+  fmt.Println("method data() signature:", shaHex[0:8])
+
+
+  data := "0x"+shaHex[0:8]
+  to   := "0x40ab5d8120b5ac6585302461a4a0320d023a16bf"
+
+  resp := call(data, to)
+  fmt.Println("call method(), resp:", resp)
+  str := resp.(string)
+  str = strings.TrimPrefix(str, "0x")
+  str = string(str)
+  value, err := hex.DecodeString(str)
+  if err != nil {
+    fmt.Println(err)
+  }
+  fmt.Println("value (as bytes):",  value)
+  fmt.Println("value (as string):", string(value))
+
 
   // TODO:
   // eth_sendTransaction - https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_sendtransaction
-  // eth_getTransactionReceipt
-  // eth_sign?
+  // eth_sign
 
-  // 4bca2b137edc580fe50a88983ef860ebaca36c857b1f492839d6d7392452a63c82cbebc68e3b70a2a1480b4bb5d437a7cba6ecf9d89f9ff3ccd14cd6146ea7e7
-  // 1597842aac52bc9d13fe249d808afbf44da13524759477404c3592ee331173e89fe1cbf21a7e4360990d565fad4643cdb209d80fa41a91dea97e665022c92135
 }
 
 func compile(contract string) (*simplejson.Json) {
+  //  TODO: compile with solc
   res := web3.Call("eth_compileSolidity", `["`+contract+`"]`).Get("result")
   return res
 }
@@ -53,11 +68,17 @@ func getAbi(compiledResp *simplejson.Json) (interface {}) {
   return compiledResp.Get("test").Get("info").Get("abiDefinition").MustArray()
 }
 
-func call() (interface {}) {
-  to := "0x5e7565ff99945b476a830c04ec15bc631362bcd7"
-  data := "0x3e27986000000000000000000000000000000002400000000000000000000000000000000000000000000000000000000000000880000000000000000000000000000000"
-  res := web3.Call("eth_call", `{ "to": "`+to+`", "data": "`+data+`", }`).Get("result").MustString()
-  return res
+func call(data string, to string) (interface {}) {
+  callArgs := `[{ "to": "`+to+`", "data": "`+data+`" }]`
+  // fmt.Println(callArgs)
+  res := web3.Call("eth_call", callArgs)
+  errStr := res.Get("error").MustString()
+  if errStr != "" {
+    fmt.Println("Error: " + errStr)
+    pp(res)
+  }
+  resp := res.Get("result").MustString()
+  return resp
 }
 
 func coinbase() (string) {
@@ -70,8 +91,9 @@ func accounts() ([]interface {}) {
   return res
 }
 
-func getBalance(address string) (int) {
-  res := web3.Call("eth_getBalance", "["+address+"]").Get("result").MustInt()
+func getBalance(address string) (string) {
+  pp(web3.Call("eth_getBalance", "[\""+address+"\"]").Get("result"))
+  res := web3.Call("eth_getBalance", "[\""+address+"\"]").Get("result").MustString()
   return res
 }
 
@@ -80,7 +102,7 @@ func getBalance(address string) (int) {
 func pp(data interface {}) {
   js, err := json.MarshalIndent(data, "", "  ")
   if err != nil {
-      fmt.Println("error:", err)
+    fmt.Println("error:", err)
   }
   fmt.Print(string(js))
   println()

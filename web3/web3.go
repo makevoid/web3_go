@@ -4,10 +4,11 @@ import (
   "github.com/bitly/go-simplejson"
   "github.com/parnurzeal/gorequest"
   "log"
+  // "fmt"
 )
 
 const (
-  apiUrl string = "http://localhost:8548" // 8545 (default port)
+  apiUrl string = "http://localhost:8545" // 8545 (default port)
 )
 
 func Call(args ...string) (*simplejson.Json) {
@@ -17,8 +18,11 @@ func Call(args ...string) (*simplejson.Json) {
     params = args[1]
   }
 
+  postBody := `{"jsonrpc":"2.0","method":"`+method+`","params":`+params+`}`
+  // fmt.Println("postBody: " + postBody)
+
   _, body, errs := gorequest.New().Post(apiUrl).
-    Send(`{"jsonrpc":"2.0","method":"`+method+`","params":`+params+`}`).
+    Send(postBody).
     End()
 
   if errs != nil {
